@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIFTY 50 Stocks Performance Dashboard</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://img.icons8.com/color/48/000000/line-chart.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div class="container header-content">
+            <div class="brand-section">
+                <div class="logo-badge">NIFTY 50</div>
+                <div>
+                    <h1>Stocks Performance Dashboard</h1>
+                    <div class="last-updated">
+                        <span class="pulse-dot"></span>
+                        As of Market Close: 10 July 2026
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Timeframe Selector -->
+            <div class="timeframe-selector">
+                <button class="timeframe-btn active" data-tf="1D">1 DAY</button>
+                <button class="timeframe-btn" data-tf="30D">30 DAY</button>
+                <button class="timeframe-btn" data-tf="365D">365 DAY</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Nifty Index Bar -->
+    <div class="nifty-bar">
+        <div class="container nifty-bar-content">
+            <span class="nifty-title">NIFTY 50 INDEX:</span>
+            <span id="nifty-val" class="nifty-val">-</span>
+            <span id="nifty-change" class="nifty-change">-</span>
+            
+            <div class="nifty-timeframe-badges">
+                <div class="badge-item">30 Day Perf: <span id="nifty-30d">-</span></div>
+                <div class="badge-item">365 Day Perf: <span id="nifty-365d">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="container">
+        
+        <!-- Summary Cards Grid -->
+        <div class="dashboard-grid">
+            
+            <!-- Card 1: Average Return -->
+            <div class="card metric-card">
+                <div class="metric-label">Average Return</div>
+                <div id="avg-return" class="metric-value">-</div>
+                <div class="metric-sub">Mean performance of constituents</div>
+            </div>
+            
+            <!-- Card 2: Gainers Count -->
+            <div class="card metric-card">
+                <div class="metric-label">Gainers Count</div>
+                <div id="gainers-count" class="metric-value gain-text">-</div>
+                <div class="metric-sub">Stocks with positive return</div>
+            </div>
+            
+            <!-- Card 3: Losers Count -->
+            <div class="card metric-card">
+                <div class="metric-label">Losers Count</div>
+                <div id="losers-count" class="metric-value loss-text">-</div>
+                <div class="metric-sub">Stocks with negative or flat return</div>
+            </div>
+            
+            <!-- Card 4: Top & Worst Performers -->
+            <div class="card metric-card">
+                <div style="display: flex; justify-content: space-between; gap: 8px;">
+                    <div>
+                        <div class="metric-label">Top Performer</div>
+                        <div id="top-performer" style="font-size: 16px; font-weight: 700; margin-top: 6px;">-</div>
+                        <div id="top-performer-val" style="font-size: 14px; font-weight: 600;">-</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="metric-label">Worst Performer</div>
+                        <div id="worst-performer" style="font-size: 16px; font-weight: 700; margin-top: 6px;">-</div>
+                        <div id="worst-performer-val" style="font-size: 14px; font-weight: 600;">-</div>
+                    </div>
+                </div>
+                <div class="metric-sub" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 6px;">
+                    Constituent extremes
+                </div>
+            </div>
+
+            <!-- Chart Row: Performance ranking & Scatter Plot -->
+            
+            <!-- Performance Bar Chart -->
+            <div class="card span-2">
+                <div class="chart-header">
+                    <div class="chart-title">Top 5 Gainers & Top 5 Losers</div>
+                    <div class="metric-sub">Percentage change for selected timeframe</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="rankingChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Scatter Plot -->
+            <div class="card span-2">
+                <div class="chart-header">
+                    <div class="chart-title">Momentum vs Trend (30D vs 365D Return)</div>
+                    <div class="metric-sub">Highlighting short-term momentum relative to long-term trends</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Table & Distribution Grid Row -->
+            
+            <!-- Main Data Table -->
+            <div class="card span-3 table-card">
+                <div style="padding: 20px 20px 0 20px;">
+                    <div class="table-controls">
+                        <div class="search-filter-group">
+                            <div class="search-input-wrapper">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="search-input" class="search-input" placeholder="Search by Symbol or Sector...">
+                            </div>
+                            <select id="sector-filter" class="select-filter">
+                                <option value="ALL">All Sectors</option>
+                            </select>
+                        </div>
+                        <div id="table-stats-bar" class="table-stats-bar">
+                            Showing Nifty 50 constituents
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-sort="symbol" class="sort-active sort-asc">Symbol <span class="sort-icon"></span></th>
+                                <th data-sort="sector">Sector <span class="sort-icon"></span></th>
+                                <th data-sort="ltp" class="right-align">LTP (₹) <span class="sort-icon"></span></th>
+                                <th data-sort="activeChange" class="right-align">Return % <span class="sort-icon"></span></th>
+                                <th data-sort="valueCrores" class="right-align">Value (Cr) <span class="sort-icon"></span></th>
+                                <th data-sort="volume" class="right-align">Volume <span class="sort-icon"></span></th>
+                                <th class="center-align" style="width: 25%;">52W High / Low Range</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Populated dynamically via app.js -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Table Pagination -->
+                <div class="pagination">
+                    <button id="prev-page-btn" class="pagination-btn" disabled>Previous</button>
+                    <div id="pagination-info" class="page-info">Showing 0 to 0 of 0 entries</div>
+                    <button id="next-page-btn" class="pagination-btn">Next</button>
+                </div>
+            </div>
+            
+            <!-- Return Distribution List -->
+            <div class="card span-1">
+                <div class="chart-header">
+                    <div class="chart-title">Return Distribution</div>
+                </div>
+                <div class="metric-sub">Number of stocks categorized by returns bucket</div>
+                <div id="distribution-list" class="dist-bars">
+                    <!-- Populated dynamically via app.js -->
+                </div>
+                <div class="chart-info-box" style="margin-top: 24px;">
+                    <strong>Insight:</strong> Distributions shift depending on the active timeframe. Large-cap stock distributions tend to follow a bell-curve model over long periods.
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Stock Detail Modal Window -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span id="modal-symbol" class="modal-symbol">-</span>
+                    <span id="modal-sector" class="modal-sector">-</span>
+                </div>
+                <button id="close-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-grid-2">
+                    <div class="modal-price-box">
+                        <span class="modal-price-label">Last Traded Price</span>
+                        <span id="modal-ltp" class="modal-price-value">-</span>
+                        <div id="modal-change" class="modal-price-change">-</div>
+                    </div>
+                    
+                    <div>
+                        <table class="stat-table">
+                            <tr>
+                                <td class="lbl">Open</td>
+                                <td id="m-open" class="val">-</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">High</td>
+                                <td id="m-high" class="val">-</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">Low</td>
+                                <td id="m-low" class="val">-</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">Prev. Close</td>
+                                <td id="m-close" class="val">-</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <h3 style="font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; color: var(--text-secondary);">Trading & Volume Data</h3>
+                <table class="stat-table" style="margin-bottom: 24px;">
+                    <tr>
+                        <td class="lbl">Volume (Shares)</td>
+                        <td id="m-volume" class="val">-</td>
+                        <td class="lbl" style="padding-left: 20px;">52W High</td>
+                        <td id="m-high52" class="val">-</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">Value (Crores)</td>
+                        <td id="m-value" class="val">-</td>
+                        <td class="lbl" style="padding-left: 20px;">52W Low</td>
+                        <td id="m-low52" class="val">-</td>
+                    </tr>
+                    <tr>
+                        <td class="lbl">Distance from 52W High</td>
+                        <td id="m-dist-high" class="val loss-text" style="font-weight: 600;">-</td>
+                        <td class="lbl" style="padding-left: 20px;">Distance from 52W Low</td>
+                        <td id="m-dist-low" class="val gain-text" style="font-weight: 600;">-</td>
+                    </tr>
+                </table>
+                
+                <h3 style="font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; color: var(--text-secondary);">Performance Breakdown</h3>
+                <div class="modal-timeframe-grid">
+                    <div class="timeframe-card">
+                        <div class="tf-lbl">1 DAY</div>
+                        <div id="m-1d" class="tf-val">-</div>
+                    </div>
+                    <div class="timeframe-card">
+                        <div class="tf-lbl">30 DAY</div>
+                        <div id="m-30d" class="tf-val">-</div>
+                    </div>
+                    <div class="timeframe-card">
+                        <div class="tf-lbl">365 DAY</div>
+                        <div id="m-365d" class="tf-val">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
